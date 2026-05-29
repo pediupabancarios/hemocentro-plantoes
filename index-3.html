@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>Hemocentro JP</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;font-family:'Plus Jakarta Sans',sans-serif;background:#F0F4F8}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes slideIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* APP SHELL */
+#app{display:flex;height:100vh;overflow:hidden;position:relative}
+
+/* SIDEBAR OVERLAY (mobile) */
+#sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100}
+#sidebar-overlay.show{display:block}
+
+/* SIDEBAR */
+#sidebar{
+  position:fixed;top:0;left:0;height:100vh;width:260px;
+  background:#0D1B2A;display:flex;flex-direction:column;
+  z-index:101;transform:translateX(-100%);transition:transform .25s ease;
+  overflow-y:auto;
+}
+#sidebar.open{transform:translateX(0)}
+
+/* DESKTOP: sidebar always visible */
+@media(min-width:768px){
+  #sidebar{position:relative;transform:translateX(0)!important;flex-shrink:0}
+  #sidebar-overlay{display:none!important}
+  #btn-menu{display:none}
+}
+
+/* MAIN */
+#main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+
+/* TOPBAR */
+#topbar{
+  background:#fff;display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;height:56px;border-bottom:1px solid #E0E7EF;flex-shrink:0;
+  box-shadow:0 1px 4px rgba(0,0,0,.06);position:relative;z-index:10
+}
+
+/* CONTENT */
+#content{flex:1;overflow-y:auto;padding:16px;animation:fadeIn .2s ease}
+
+/* CARDS */
+.card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 6px rgba(0,0,0,.07);margin-bottom:14px}
+.card-title{font-weight:700;font-size:15px;color:#1a1a2e;margin-bottom:12px}
+
+/* GRID */
+.sector-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:14px}
+@media(min-width:600px){.sector-grid{grid-template-columns:repeat(4,1fr)}}
+.two-col{display:flex;flex-direction:column;gap:14px}
+@media(min-width:768px){.two-col{flex-direction:row}}
+.col-main{flex:1.6;min-width:0}
+.col-side{flex:0.85;min-width:0}
+
+/* NAV BUTTONS */
+.nav-btn{
+  display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:10px;
+  border:none;width:100%;text-align:left;font-size:14px;font-weight:600;
+  margin-bottom:3px;background:transparent;color:#B0BEC5;cursor:pointer;
+  transition:background .15s,color .15s
+}
+.nav-btn:hover{background:#1a2d42;color:#fff}
+.nav-btn.active{background:#1565C0;color:#fff}
+
+/* BUTTONS */
+.btn{border:none;border-radius:8px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;transition:opacity .15s}
+.btn:hover{opacity:.88}
+.btn-blue{background:#1565C0;color:#fff}
+.btn-green{background:#2E7D32;color:#fff}
+.btn-red{background:#C62828;color:#fff}
+.btn-danger{background:#FFEBEE;color:#C62828;padding:5px 10px;font-size:12px}
+.btn-success{background:#E8F5E9;color:#2E7D32;padding:5px 10px;font-size:12px}
+.btn-gray{background:#F0F4F8;color:#555}
+.btn-full{width:100%;padding:13px;font-size:15px;border-radius:10px}
+.btn-disabled{background:#E0E7EF;color:#aaa;cursor:not-allowed}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:500px}
+th{text-align:left;font-size:12px;color:#90A4AE;font-weight:600;padding:7px 8px;border-bottom:1px solid #F0F4F8;white-space:nowrap}
+td{padding:9px 8px;font-size:13px;color:#333;vertical-align:middle}
+tr{border-bottom:1px solid #F9FAFB}
+
+/* BADGES */
+.badge-green{background:#E8F5E9;color:#2E7D32;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600}
+.badge-gray{background:#F0F4F8;color:#666;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600}
+.live-tag{display:inline-flex;align-items:center;gap:4px;background:#E8F5E9;color:#2E7D32;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;animation:pulse 2s infinite}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px}
+.modal{background:#fff;border-radius:16px;width:100%;max-width:440px;box-shadow:0 8px 32px rgba(0,0,0,.2);animation:fadeIn .2s ease}
+.modal-head{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #F0F4F8}
+.modal-body{padding:20px;max-height:80vh;overflow-y:auto}
+label{display:block;font-weight:600;font-size:13px;color:#555;margin-bottom:5px;margin-top:12px}
+input,select,textarea{width:100%;border:1.5px solid #E0E7EF;border-radius:8px;padding:10px 12px;font-size:16px!important;outline:none;font-family:inherit;background:#fff;transition:border .2s;-webkit-appearance:none;appearance:none;-webkit-user-select:text!important;user-select:text!important;touch-action:manipulation}
+input:focus,select:focus,textarea:focus{border-color:#1565C0}
+select{font-size:16px!important}
+
+/* NOTIF ROW */
+.notif-row{display:flex;align-items:flex-start;gap:10px;padding:11px 0;border-bottom:1px solid #F0F4F8}
+.notif-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+
+/* ANUNCIO */
+.anuncio-card{border-radius:12px;padding:14px 16px;margin-bottom:10px;border-left:4px solid}
+
+/* PLANTONISTA BOTTOM NAV */
+#bottom-nav{
+  display:flex;background:#fff;border-top:1px solid #E0E7EF;
+  position:fixed;bottom:0;left:0;right:0;z-index:50;
+  box-shadow:0 -2px 10px rgba(0,0,0,.08)
+}
+.bottom-btn{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 4px;border:none;background:none;cursor:pointer;font-size:10px;font-weight:600;color:#90A4AE;gap:3px}
+.bottom-btn.active{color:#1565C0}
+.bottom-btn span.icon{font-size:20px}
+
+/* LOGIN */
+.login-wrap{min-height:100vh;background:linear-gradient(135deg,#0D1B2A,#1a3a5c,#0D1B2A);display:flex;align-items:center;justify-content:center;padding:16px}
+.login-card{background:#fff;border-radius:20px;padding:36px 28px;width:100%;max-width:380px;box-shadow:0 24px 80px rgba(0,0,0,.4)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modal-root"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+import { getDatabase, ref, onValue, set, push, update, get, remove } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAqjzE_OJlSD28f521dByuP6lZy04yJpss",
+  authDomain: "hemocentro-joaopessoa.firebaseapp.com",
+  databaseURL: "https://hemocentro-joaopessoa-default-rtdb.firebaseio.com",
+  projectId: "hemocentro-joaopessoa",
+  storageBucket: "hemocentro-joaopessoa.firebasestorage.app",
+  messagingSenderId: "1074872155099",
+  appId: "1:1074872155099:web:2b9fbb8e3c9664893545fe"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const SETORES = [
+  {id:"triagem",    nome:"Triagem Clínica",           icone:"🩺", cor:"#2196F3", vagas:5},
+  {id:"orientacao", nome:"Orientação",                icone:"💬", cor:"#4CAF50", vagas:4},
+  {id:"intercorr",  nome:"Intercorrências",           icone:"⚠️", cor:"#FF9800", vagas:3},
+  {id:"transfusao", nome:"Ambulatório de Transfusão", icone:"🩸", cor:"#9C27B0", vagas:4},
+];
+
+const MEDICOS_SEED = {
+  crm_11707:{crm:"11707",nome:"Rodrigo Cahuana Chipayo",matricula:"GESTOR",funcao:"Gestor",setor:null,role:"gestor",senha:"1234"},
+  crm_4331:{crm:"4331",nome:"Ana Thereza de Medeiros Correia",matricula:"946.847-1",funcao:"Médico(a)",setor:"Triagem Clínica",role:"plantonista",senha:"1234"},
+  crm_17755:{crm:"17755",nome:"Andre Barros Teixeira",matricula:"926.206-7",funcao:"Médico(a)",setor:"Triagem Clínica",role:"plantonista",senha:"1234"},
+  crm_17198:{crm:"17198",nome:"Antônio Jose Pedrosa Formiga",matricula:"679.935-3",funcao:"Médico(a)",setor:"Triagem Clínica",role:"plantonista",senha:"1234"},
+  crm_18208:{crm:"18208",nome:"Caio Henrique Santos Costa",matricula:"927.178-3",funcao:"Médico(a)",setor:"Triagem Clínica",role:"plantonista",senha:"1234"},
+  crm_18851:{crm:"18851",nome:"Dayanna Joyce de Lacerda Ferreira",matricula:"929.505-4",funcao:"Médico(a)",setor:"Triagem Clínica",role:"plantonista",senha:"1234"},
+  crm_13693:{crm:"13693",nome:"Gabriella Palitot Bandeira",matricula:"924.164-7",funcao:"Médico(a)",setor:"Triagem Clínica",role:"plantonista",senha:"1234"},
+  crm_9828:{crm:"9828",nome:"Hellen Karla Sa Fernandes da Costa",matricula:"941.736-2",funcao:"Médico(a)",setor:"Triagem Clínica",role:"plantonista",senha:"1234"},
+  crm_15679:{crm:"15679",nome:"Maria das Graças Nunes",matricula:"919.787-7",funcao:"Médico(a)",setor:"Triagem Clínica",role:"plantonista",senha:"1234"},
+  crm_17254:{crm:"17254",nome:"Maria Fernada Lopes Linhares",matricula:"926.355-1",funcao:"Médico(a)",setor:"Triagem Clínica",role:"plantonista",senha:"1234"},
+  crm_19124:{crm:"19124",nome:"Matheus Eduardo Santos Madruga",matricula:"927.812-5",funcao:"Médico(a)",setor:"Triagem Clínica",role:"plantonista",senha:"1234"},
+  crm_8356:{crm:"8356",nome:"Pedro Augusto de Oliveira Feitosa",matricula:"184.626-9",funcao:"Médico(a)",setor:"Triagem Clínica",role:"plantonista",senha:"1234"},
+  crm_19644:{crm:"19644",nome:"Raissa Rackel Pinheiro dos Santos",matricula:"929.841-0",funcao:"Médico(a)",setor:"Triagem Clínica",role:"plantonista",senha:"1234"},
+  crm_14074:{crm:"14074",nome:"Ravel Alves Martins",matricula:"946.755-6",funcao:"Médico(a)",setor:"Triagem Clínica",role:"plantonista",senha:"1234"},
+};
+
+// ── STATE ──
+let user = JSON.parse(sessionStorage.getItem("hemo_user")||"null");
+let medicosDB={}, plantoesDB={}, notifDB={}, anunciosDB={};
+let page = "dashboard";
+let clockTick = null;
+let listeners = [];
+
+// ── HELPERS ──
+const fmtTime = ts => { try{ return new Date(ts).toLocaleString("pt-BR"); }catch{ return "—"; }};
+const nowStr = () => new Date().toLocaleString("pt-BR");
+const durStr = (i,f) => {
+  if(!i) return "—";
+  const m = Math.round((new Date(f||Date.now())-new Date(i))/60000);
+  return m<60 ? m+"min" : Math.floor(m/60)+"h"+(m%60?""+m%60+"min":"");
+};
+const $ = id => document.getElementById(id);
+const stopClock = () => { if(clockTick){ clearInterval(clockTick); clockTick=null; }};
+const stopListeners = () => { listeners.forEach(u=>u()); listeners=[]; };
+
+// ── SEED ──
+async function seedIfEmpty(){
+  const s = await get(ref(db,"medicos/crm_11707"));
+  if(!s.exists()){
+    await set(ref(db,"medicos"), MEDICOS_SEED);
+    const obj={};
+    SETORES.forEach(s=>obj[s.id]=s);
+    await set(ref(db,"setores"), obj);
+  }
+}
+
+// ── REALTIME LISTENERS ──
+function startListeners(){
+  stopListeners();
+  listeners.push(onValue(ref(db,"medicos"), s=>{ medicosDB=s.val()||{}; render(); }));
+  listeners.push(onValue(ref(db,"plantoes"), s=>{ plantoesDB=s.val()||{}; render(); }));
+  listeners.push(onValue(ref(db,"notificacoes"), s=>{ notifDB=s.val()||{}; render(); }));
+  listeners.push(onValue(ref(db,"anuncios"), s=>{ anunciosDB=s.val()||{}; render(); }));
+}
+
+// ── RENDER ROUTER ──
+function render(){
+  if(!user){ renderLogin(); return; }
+  if(user.role==="gestor") renderGestor();
+  else renderPlantonista();
+}
+
+// ══════════════════════════════════════════════════
+// LOGIN
+// ══════════════════════════════════════════════════
+function renderLogin(){
+  stopClock();
+  $("app").innerHTML=`
+  <div class="login-wrap">
+    <div class="login-card">
+      <div style="display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:24px">
+        <span style="font-size:44px">🩸</span>
+        <div><div style="font-weight:800;font-size:22px;color:#0D1B2A">Hemocentro JP</div><div style="font-size:12px;color:#90A4AE">João Pessoa — PB</div></div>
+      </div>
+      <div style="font-weight:700;font-size:20px;color:#0D1B2A;text-align:center;margin-bottom:4px">Acesso ao Sistema</div>
+      <div style="font-size:13px;color:#90A4AE;text-align:center;margin-bottom:24px">Gestão de Plantões Médicos</div>
+      <label>CRM</label>
+      <input id="i-crm" type="text" placeholder="Ex: 11707" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" style="font-size:18px;padding:14px;border-radius:12px;border:2px solid #E0E7EF;width:100%;box-sizing:border-box;display:block;-webkit-user-select:text;user-select:text;touch-action:manipulation;margin-bottom:4px"/>
+      <label style="margin-top:14px">Senha</label>
+      <input id="i-senha" type="password" placeholder="••••" autocomplete="off" style="font-size:18px;padding:14px;border-radius:12px;border:2px solid #E0E7EF;width:100%;box-sizing:border-box;display:block;-webkit-user-select:text;user-select:text;touch-action:manipulation"/>
+      <div id="i-err" style="display:none;background:#FFEBEE;color:#C62828;border-radius:8px;padding:10px;font-size:13px;margin-top:12px;text-align:center"></div>
+      <button id="i-btn" class="btn btn-blue btn-full" style="margin-top:18px" onclick="doLogin()">Entrar</button>
+      <div style="font-size:12px;color:#90A4AE;text-align:center;margin-top:16px">CRM (só números) · Senha padrão: <strong>1234</strong></div>
+    </div>
+  </div>`;
+  $("i-senha").onkeydown = e => e.key==="Enter" && doLogin();
+  $("i-crm").onkeydown = e => e.key==="Enter" && doLogin();
+}
+
+window.doLogin = async function(){
+  const crm=$("i-crm").value.trim(), senha=$("i-senha").value.trim();
+  const err=$("i-err"), btn=$("i-btn");
+  if(!crm||!senha){ err.style.display="block"; err.textContent="⚠ Preencha CRM e senha."; return; }
+  err.style.display="none"; btn.textContent="Verificando..."; btn.disabled=true;
+  try{
+    const snap=await get(ref(db,`medicos/crm_${crm}`));
+    if(!snap.exists()){ err.style.display="block"; err.textContent="⚠ CRM não encontrado."; btn.textContent="Entrar"; btn.disabled=false; return; }
+    const data=snap.val();
+    if(data.senha!==senha){ err.style.display="block"; err.textContent="⚠ Senha incorreta."; btn.textContent="Entrar"; btn.disabled=false; return; }
+    user={...data, key:`crm_${crm}`};
+    sessionStorage.setItem("hemo_user", JSON.stringify(user));
+    startListeners();
+  }catch(e){ err.style.display="block"; err.textContent="⚠ Erro de conexão."; btn.textContent="Entrar"; btn.disabled=false; }
+};
+
+window.doLogout = function(){
+  user=null; page="dashboard";
+  sessionStorage.removeItem("hemo_user");
+  stopClock(); stopListeners();
+  render();
+};
+
+// ══════════════════════════════════════════════════
+// GESTOR
+// ══════════════════════════════════════════════════
+function renderGestor(){
+  const medicos = Object.entries(medicosDB).map(([k,v])=>({...v,key:k})).filter(m=>m.role!=="gestor");
+  const plantoes = Object.entries(plantoesDB).map(([k,v])=>({...v,key:k}));
+  const ativos = plantoes.filter(p=>p.status==="ativo");
+  const notifs = Object.values(notifDB).reverse();
+  const anuncios = Object.entries(anunciosDB).map(([k,v])=>({...v,key:k})).reverse();
+
+  const navItems=[
+    {id:"dashboard",icon:"⊞",label:"Dashboard"},
+    {id:"plantoes",icon:"📅",label:"Plantões"},
+    {id:"medicos",icon:"👥",label:"Médicos"},
+    {id:"anuncios",icon:"📢",label:"Anúncios"},
+    {id:"relatorios",icon:"📊",label:"Relatórios"},
+    {id:"notificacoes",icon:"🔔",label:"Notificações"},
+  ];
+
+  const pages = {
+    dashboard: htmlDashboard(medicos, plantoes, ativos, notifs, anuncios),
+    plantoes: htmlPlantoes(plantoes, medicos),
+    medicos: htmlMedicos(medicos),
+    anuncios: htmlAnuncios(anuncios),
+    relatorios: htmlRelatorios(plantoes, medicos),
+    notificacoes: htmlNotifs(notifs),
+  };
+
+  $("app").innerHTML=`
+  <div id="sidebar-overlay" onclick="closeSidebar()"></div>
+  <aside id="sidebar">
+    <div style="display:flex;align-items:center;gap:10px;padding:20px 16px 14px;border-bottom:1px solid #1a2d42">
+      <span style="font-size:28px">🩸</span>
+      <div><div style="color:#fff;font-weight:800;font-size:16px">Hemocentro JP</div><div style="color:#90A4AE;font-size:11px">Painel do Gestor</div></div>
+    </div>
+    <nav style="flex:1;padding:10px 8px">
+      ${navItems.map(n=>`
+      <button class="nav-btn ${page===n.id?'active':''}" onclick="goPage('${n.id}')">
+        <span style="font-size:18px;width:22px;text-align:center">${n.icon}</span>${n.label}
+      </button>`).join("")}
+      <button class="nav-btn" style="color:#EF5350;margin-top:12px" onclick="doLogout()">
+        <span style="font-size:18px;width:22px;text-align:center">🚪</span>Sair
+      </button>
+    </nav>
+    <div style="padding:14px;border-top:1px solid #1a2d42;color:#546E7A;font-size:11px;text-align:center">
+      ${user.nome}<br>CRM ${user.crm} · Gestor<br><span style="color:#37474F">v1.0.0</span>
+    </div>
+  </aside>
+  <div id="main">
+    <header id="topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button id="btn-menu" onclick="openSidebar()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#555;padding:4px">☰</button>
+        <div>
+          <div style="font-weight:700;font-size:16px;color:#1a1a2e">${navItems.find(n=>n.id===page)?.label||""} <span class="live-tag">● VIVO</span></div>
+          <div style="font-size:11px;color:#90A4AE">Hemocentro JP</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:36px;height:36px;border-radius:50%;background:#1565C0;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px">G</div>
+      </div>
+    </header>
+    <div id="content">${pages[page]||""}</div>
+  </div>`;
+
+  startClock();
+}
+
+window.goPage = function(p){ page=p; closeSidebar(); render(); };
+window.openSidebar = function(){ $("sidebar")?.classList.add("open"); $("sidebar-overlay")?.classList.add("show"); };
+window.closeSidebar = function(){ $("sidebar")?.classList.remove("open"); $("sidebar-overlay")?.classList.remove("show"); };
+
+function htmlDashboard(medicos, plantoes, ativos, notifs, anuncios){
+  const enc=plantoes.filter(p=>p.status==="encerrado");
+  return `
+  ${anuncios.length>0?`<div class="card" style="background:linear-gradient(135deg,#1565C0,#1976D2);color:#fff;margin-bottom:14px">
+    <div style="font-weight:700;font-size:14px;margin-bottom:8px">📢 Anúncios Ativos (${anuncios.length})</div>
+    ${anuncios.slice(0,2).map(a=>`<div style="background:rgba(255,255,255,.15);border-radius:8px;padding:10px;margin-bottom:6px">
+      <div style="font-weight:600;font-size:13px">${a.titulo}</div>
+      <div style="font-size:12px;opacity:.9;margin-top:2px">${a.texto}</div>
+    </div>`).join("")}
+  </div>`:""}
+  <div class="sector-grid">
+    ${SETORES.map(s=>{ const c=ativos.filter(p=>p.setorId===s.id).length; return `
+    <div class="card" style="padding:14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <div style="width:36px;height:36px;border-radius:9px;background:${s.cor}22;display:flex;align-items:center;justify-content:center;font-size:18px">${s.icone}</div>
+        <span style="font-weight:700;color:${s.cor};font-size:12px;line-height:1.2">${s.nome}</span>
+      </div>
+      <div style="font-size:11px;color:#90A4AE">Médicos</div>
+      <div style="font-weight:800;font-size:26px;color:#1a1a2e">${c}<span style="font-size:14px;color:#aaa;font-weight:400">/${s.vagas}</span></div>
+      <div style="display:flex;align-items:center;gap:4px;margin-top:4px">
+        <span style="width:7px;height:7px;border-radius:50%;background:${c>0?'#4CAF50':'#FF9800'};display:inline-block"></span>
+        <span style="font-size:11px;color:#777">Em andamento</span>
+      </div>
+    </div>`;}).join("")}
+  </div>
+  <div class="two-col">
+    <div class="col-main">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <span class="card-title" style="margin:0">Plantões Ativos</span>
+          <button class="btn btn-blue" onclick="openModal('novoPlantao')">+ Novo</button>
+        </div>
+        ${ativos.length===0?'<div style="color:#aaa;text-align:center;padding:20px;font-size:14px">Nenhum plantão ativo</div>':`
+        <div class="tbl-wrap"><table><thead><tr><th>Médico</th><th>Setor</th><th>Início</th><th>Ação</th></tr></thead><tbody>
+        ${ativos.map(p=>`<tr>
+          <td><strong style="font-size:12px">${p.medicoNome}</strong><br><span style="color:#90A4AE;font-size:11px">CRM ${p.medicoCrm}</span></td>
+          <td style="font-size:12px">${p.setorNome}</td>
+          <td style="font-family:monospace;font-size:11px">${fmtTime(p.inicio)}</td>
+          <td><button class="btn btn-danger" onclick="encerrarPlantao('${p.key}','${p.medicoNome}','${p.setorNome}')">Encerrar</button></td>
+        </tr>`).join("")}
+        </tbody></table></div>`}
+      </div>
+      <div class="card">
+        <div class="card-title">Notificações Recentes</div>
+        ${notifs.slice(0,5).map(n=>`
+        <div class="notif-row">
+          <div class="notif-icon" style="background:${n.cor==='green'?'#E8F5E9':'#FFEBEE'}">${n.cor==='green'?'✅':'🔴'}</div>
+          <div><div style="font-size:13px;color:#333">${n.texto}</div><div style="font-size:11px;color:#90A4AE;margin-top:2px">${n.hora}</div></div>
+        </div>`).join("")||'<div style="color:#aaa;text-align:center;padding:16px">Sem notificações</div>'}
+      </div>
+    </div>
+    <div class="col-side">
+      <div class="card">
+        <div class="card-title">Resumo</div>
+        ${[
+          {icon:"👥",l:"Médicos",v:medicos.length,c:"#1565C0"},
+          {icon:"🟢",l:"Em Plantão",v:ativos.length,c:"#2E7D32"},
+          {icon:"✅",l:"Encerrados",v:enc.length,c:"#FF9800"},
+          {icon:"📊",l:"Total",v:plantoes.length,c:"#9C27B0"},
+        ].map(r=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #F0F4F8">
+          <span style="font-size:18px">${r.icon}</span>
+          <span style="flex:1;font-size:13px;color:#444">${r.l}</span>
+          <span style="font-weight:800;font-size:20px;color:${r.c}">${r.v}</span>
+        </div>`).join("")}
+      </div>
+    </div>
+  </div>`;
+}
+
+function htmlPlantoes(plantoes, medicos){
+  const sorted = [...plantoes].sort((a,b)=>new Date(b.inicio)-new Date(a.inicio));
+  return `
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <h2 style="font-weight:700;font-size:18px;color:#1a1a2e">Plantões</h2>
+    <button class="btn btn-blue" onclick="openModal('novoPlantao')">+ Novo</button>
+  </div>
+  <div class="card">
+    <div class="tbl-wrap"><table><thead><tr><th>Médico</th><th>Setor</th><th>Início</th><th>Fim</th><th>Dur.</th><th>Status</th><th></th></tr></thead><tbody>
+    ${sorted.length===0?'<tr><td colspan="7" style="text-align:center;color:#aaa;padding:24px">Nenhum registro</td></tr>':
+    sorted.map(p=>`<tr>
+      <td><strong style="font-size:12px">${p.medicoNome}</strong></td>
+      <td style="font-size:12px">${p.setorNome}</td>
+      <td style="font-family:monospace;font-size:11px">${fmtTime(p.inicio)}</td>
+      <td style="font-family:monospace;font-size:11px">${fmtTime(p.fim)}</td>
+      <td style="font-size:12px">${durStr(p.inicio,p.fim)}</td>
+      <td><span class="${p.status==='ativo'?'badge-green':'badge-gray'}">● ${p.status}</span></td>
+      <td>${p.status==='ativo'?`<button class="btn btn-danger" onclick="encerrarPlantao('${p.key}','${p.medicoNome}','${p.setorNome}')">Encerrar</button>`:''}</td>
+    </tr>`).join("")}
+    </tbody></table></div>
+  </div>`;
+}
+
+function htmlMedicos(medicos){
+  return `
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <h2 style="font-weight:700;font-size:18px;color:#1a1a2e">Médicos (${medicos.length})</h2>
+    <button class="btn btn-blue" onclick="openModal('novoMedico')">+ Novo</button>
+  </div>
+  <div class="card">
+    <div class="tbl-wrap"><table><thead><tr><th>Nome</th><th>CRM</th><th>Matrícula</th><th>Setor</th><th>Ações</th></tr></thead><tbody>
+    ${medicos.map(m=>`<tr>
+      <td><strong style="font-size:12px">${m.nome}</strong></td>
+      <td style="font-size:12px">${m.crm}</td>
+      <td style="font-size:12px">${m.matricula||"—"}</td>
+      <td><select style="padding:4px 6px;font-size:11px;width:auto" onchange="editarSetor('${m.key}',this.value)">
+        <option value="">Sem setor</option>
+        ${SETORES.map(s=>`<option value="${s.nome}" ${m.setor===s.nome?"selected":""}>${s.nome}</option>`).join("")}
+      </select></td>
+      <td><button class="btn btn-success" onclick="resetSenha('${m.key}','${m.nome}')">Reset</button></td>
+    </tr>`).join("")}
+    </tbody></table></div>
+  </div>`;
+}
+
+function htmlAnuncios(anuncios){
+  const cores = [{l:"Informação",c:"#2196F3"},{l:"Urgente",c:"#F44336"},{l:"Aviso",c:"#FF9800"},{l:"Positivo",c:"#4CAF50"}];
+  return `
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <h2 style="font-weight:700;font-size:18px;color:#1a1a2e">Anúncios</h2>
+    <button class="btn btn-blue" onclick="openModal('novoAnuncio')">+ Novo</button>
+  </div>
+  <div style="font-size:13px;color:#90A4AE;margin-bottom:12px">Anúncios aparecem para todos os plantonistas em tempo real.</div>
+  ${anuncios.length===0?'<div class="card" style="text-align:center;color:#aaa;padding:24px">Nenhum anúncio</div>':
+  anuncios.map(a=>`
+  <div class="card" style="border-left:4px solid ${a.cor||'#2196F3'}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div style="flex:1">
+        <div style="font-weight:700;color:#1a1a2e;margin-bottom:4px">${a.titulo}</div>
+        <div style="font-size:13px;color:#555;margin-bottom:6px">${a.texto}</div>
+        <div style="font-size:11px;color:#90A4AE">${a.hora}</div>
+      </div>
+      <button class="btn btn-danger" style="margin-left:10px;flex-shrink:0" onclick="deletarAnuncio('${a.key}')">✕</button>
+    </div>
+  </div>`).join("")}`;
+}
+
+function htmlRelatorios(plantoes, medicos){
+  const ativos=plantoes.filter(p=>p.status==="ativo");
+  const enc=plantoes.filter(p=>p.status==="encerrado");
+  const totalMin=enc.reduce((a,p)=>p.fim&&p.inicio?a+Math.round((new Date(p.fim)-new Date(p.inicio))/60000):a,0);
+  return `
+  <h2 style="font-weight:700;font-size:18px;color:#1a1a2e;margin-bottom:14px">Relatórios</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+    ${[{l:"Ativos",v:ativos.length,c:"#2E7D32"},{l:"Encerrados",v:enc.length,c:"#FF9800"},{l:"Total",v:plantoes.length,c:"#1565C0"},{l:"Horas",v:Math.floor(totalMin/60)+"h",c:"#9C27B0"}]
+    .map(r=>`<div class="card" style="padding:14px"><div style="font-size:12px;color:#90A4AE">${r.l}</div><div style="font-weight:800;font-size:24px;color:${r.c}">${r.v}</div></div>`).join("")}
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    ${[
+      {tipo:"chegada",icon:"📄",title:"Chegada",desc:"Horários de início",cor:"#EF5350"},
+      {tipo:"fechamento",icon:"📊",title:"Fechamento",desc:"Horários de saída",cor:"#4CAF50"},
+      {tipo:"completo",icon:"📋",title:"Completo",desc:"Todos os plantões",cor:"#2196F3"},
+      {tipo:"ausencias",icon:"📉",title:"Ausências",desc:"Sem plantão registrado",cor:"#FF5722"},
+    ].map(r=>`<div class="card">
+      <div style="font-size:28px;margin-bottom:8px">${r.icon}</div>
+      <div style="font-weight:700;color:#1a1a2e;font-size:14px;margin-bottom:3px">${r.title}</div>
+      <div style="font-size:12px;color:#90A4AE;margin-bottom:10px">${r.desc}</div>
+      <button class="btn" style="background:${r.cor};color:#fff;width:100%" onclick="gerarRelatorio('${r.tipo}')">⬇ Baixar</button>
+    </div>`).join("")}
+  </div>`;
+}
+
+function htmlNotifs(notifs){
+  return `
+  <h2 style="font-weight:700;font-size:18px;margin-bottom:14px">Notificações</h2>
+  <div class="card">
+    ${notifs.length===0?'<div style="color:#aaa;text-align:center;padding:24px">Sem notificações</div>':
+    notifs.map(n=>`<div class="notif-row">
+      <div class="notif-icon" style="background:${n.cor==='green'?'#E8F5E9':'#FFEBEE'}">${n.cor==='green'?'✅':'🔴'}</div>
+      <div><div style="font-size:13px;color:#333">${n.texto}</div><div style="font-size:11px;color:#90A4AE;margin-top:2px">${n.hora}</div></div>
+    </div>`).join("")}
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════
+// PLANTONISTA
+// ══════════════════════════════════════════════════
+function renderPlantonista(){
+  const meusList = Object.entries(plantoesDB).map(([k,v])=>({...v,key:k})).filter(p=>p.medicoKey===user.key);
+  const ativo = meusList.find(p=>p.status==="ativo")||null;
+  const todos = [...meusList].sort((a,b)=>new Date(b.inicio)-new Date(a.inicio));
+  const ativos = Object.entries(plantoesDB).map(([k,v])=>({...v,key:k})).filter(p=>p.status==="ativo");
+  const anuncios = Object.entries(anunciosDB).map(([k,v])=>({...v,key:k})).reverse();
+
+  const pPages = {
+    dashboard: htmlPlanDashboard(ativo, ativos, anuncios),
+    historico: htmlPlanHistorico(todos),
+    escala: htmlPlanEscala(ativos),
+  };
+
+  if(!$("app").querySelector("#bottom-nav")){
+    $("app").innerHTML=`
+    <div id="main" style="padding-bottom:70px">
+      <header id="topbar">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:26px">🩸</span>
+          <div><div style="font-weight:800;font-size:15px;color:#1a1a2e">Hemocentro JP</div><div style="font-size:11px;color:#90A4AE">Plantonista</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="live-tag">● VIVO</span>
+          <div style="text-align:right"><div style="font-size:13px;font-weight:700;color:#1a1a2e">${user.nome.split(" ")[0]}</div><div style="font-size:11px;color:#90A4AE">CRM ${user.crm}</div></div>
+          <button onclick="doLogout()" style="background:none;border:1px solid #ddd;border-radius:8px;padding:5px 10px;font-size:11px;cursor:pointer;color:#777">Sair</button>
+        </div>
+      </header>
+      <div id="content"></div>
+    </div>
+    <nav id="bottom-nav">
+      <button class="bottom-btn ${page==='dashboard'?'active':''}" onclick="goPlanPage('dashboard')"><span class="icon">🏠</span>Início</button>
+      <button class="bottom-btn ${page==='historico'?'active':''}" onclick="goPlanPage('historico')"><span class="icon">📋</span>Histórico</button>
+      <button class="bottom-btn ${page==='escala'?'active':''}" onclick="goPlanPage('escala')"><span class="icon">👥</span>Escala</button>
+    </nav>`;
+  }
+
+  // Update só o conteúdo e nav (sem re-renderizar tudo)
+  const content = $("content");
+  if(content) content.innerHTML = pPages[page]||pPages["dashboard"];
+
+  // Update bottom nav active state
+  document.querySelectorAll(".bottom-btn").forEach((b,i)=>{
+    const pages=["dashboard","historico","escala"];
+    b.className="bottom-btn"+(page===pages[i]?" active":"");
+  });
+
+  startClock();
+}
+
+window.goPlanPage = function(p){ page=p; renderPlantonista(); };
+
+function htmlPlanDashboard(ativo, ativos, anuncios){
+  return `
+  <div style="padding:16px">
+    ${anuncios.length>0?`
+    <div class="card" style="background:linear-gradient(135deg,#1565C0,#1976D2);color:#fff;margin-bottom:14px">
+      <div style="font-weight:700;font-size:14px;margin-bottom:10px">📢 Anúncios do Gestor</div>
+      ${anuncios.map(a=>`<div style="background:rgba(255,255,255,.15);border-radius:8px;padding:10px;margin-bottom:8px;border-left:3px solid rgba(255,255,255,.5)">
+        <div style="font-weight:700;font-size:13px">${a.titulo}</div>
+        <div style="font-size:12px;opacity:.9;margin-top:3px">${a.texto}</div>
+        <div style="font-size:11px;opacity:.6;margin-top:4px">${a.hora}</div>
+      </div>`).join("")}
+    </div>`:""}
+
+    <div class="card">
+      <div class="card-title">🕐 Bater Ponto</div>
+      <div style="background:#F7F9FC;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">🕐</span>
+        <span id="clock" style="font-family:monospace;font-size:14px;color:#333;font-weight:600">${new Date().toLocaleString("pt-BR")}</span>
+      </div>
+      ${ativo?`
+      <div style="background:#E8F5E9;border-radius:10px;padding:12px 16px;margin-bottom:14px;border:1px solid #C8E6C9">
+        <div style="color:#2E7D32;font-weight:700;font-size:14px;margin-bottom:4px">✅ Plantão em andamento</div>
+        <div style="color:#555;font-size:13px">Setor: <strong>${ativo.setorNome}</strong></div>
+        <div style="color:#555;font-size:13px">Início: <strong style="font-family:monospace">${fmtTime(ativo.inicio)}</strong></div>
+        <div style="color:#555;font-size:13px">Duração: <strong id="dur-live">${durStr(ativo.inicio,null)}</strong></div>
+      </div>`:`
+      <div style="background:#FFF3E0;border-radius:10px;padding:12px 16px;margin-bottom:14px;border:1px solid #FFE0B2">
+        <div style="color:#E65100;font-weight:600;font-size:13px">⏸ Sem plantão ativo. Toque em Iniciar para registrar sua entrada.</div>
+      </div>`}
+      <div id="ponto-msg"></div>
+      <button onclick="iniciarPlantonista()" ${ativo?"disabled":""} class="btn btn-full ${ativo?"btn-disabled":"btn-green"}" style="margin-bottom:10px">▶ Iniciar Plantão</button>
+      <button onclick="encerrarPlantonista('${ativo?.key||""}')" ${!ativo?"disabled":""} class="btn btn-full ${!ativo?"btn-disabled":"btn-red"}">■ Encerrar Plantão</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">👤 Meus Dados</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        ${[["Nome",user.nome],["CRM",user.crm],["Matrícula",user.matricula||"—"],["Setor",user.setor||"A definir"]].map(([l,v])=>`
+        <div style="background:#F7F9FC;border-radius:8px;padding:10px 12px">
+          <div style="font-size:11px;color:#90A4AE;font-weight:600">${l}</div>
+          <div style="font-size:13px;font-weight:600;color:#1a1a2e;margin-top:2px">${v}</div>
+        </div>`).join("")}
+      </div>
+    </div>
+  </div>`;
+}
+
+function htmlPlanHistorico(todos){
+  return `<div style="padding:16px">
+  <div class="card">
+    <div class="card-title">📋 Meu Histórico de Plantões</div>
+    ${todos.length===0?'<div style="color:#aaa;text-align:center;padding:20px">Nenhum plantão registrado ainda.</div>':
+    todos.map(p=>`<div style="padding:12px 0;border-bottom:1px solid #F0F4F8">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <strong style="font-size:14px;color:#1a1a2e">${p.setorNome}</strong>
+        <span class="${p.status==='ativo'?'badge-green':'badge-gray'}">● ${p.status}</span>
+      </div>
+      <div style="font-size:12px;color:#555">▶ ${fmtTime(p.inicio)}</div>
+      ${p.fim?`<div style="font-size:12px;color:#555">■ ${fmtTime(p.fim)}</div>`:""}
+      <div style="font-size:12px;color:#90A4AE;margin-top:2px">Duração: ${durStr(p.inicio,p.fim)}</div>
+    </div>`).join("")}
+  </div></div>`;
+}
+
+function htmlPlanEscala(ativos){
+  return `<div style="padding:16px">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+    <h2 style="font-weight:700;font-size:18px;color:#1a1a2e">Escala Ao Vivo</h2>
+    <span class="live-tag">● TEMPO REAL</span>
+  </div>
+  ${SETORES.map(s=>{
+    const neste=ativos.filter(p=>p.setorId===s.id);
+    return `<div class="card" style="border-left:4px solid ${s.cor}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:20px">${s.icone}</span>
+        <span style="font-weight:700;color:${s.cor};font-size:14px">${s.nome}</span>
+        <span style="background:${s.cor}22;color:${s.cor};border-radius:20px;padding:2px 8px;font-size:12px;font-weight:700">${neste.length}/${s.vagas}</span>
+      </div>
+      ${neste.length===0?'<div style="font-size:13px;color:#aaa">Sem médicos no momento</div>':
+      neste.map(p=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #F9FAFB">
+        <span style="font-size:16px">${p.medicoKey===user.key?'👈':'👨‍⚕️'}</span>
+        <div>
+          <div style="font-size:13px;color:#333;font-weight:${p.medicoKey===user.key?700:400}">${p.medicoNome}${p.medicoKey===user.key?' (você)':''}</div>
+          <div style="font-size:11px;color:#90A4AE;font-family:monospace">desde ${fmtTime(p.inicio)}</div>
+        </div>
+      </div>`).join("")}
+    </div>`;
+  }).join("")}</div>`;
+}
+
+// ── ACTIONS ──
+window.encerrarPlantao = async function(key, nome, setor){
+  if(!confirm(`Encerrar plantão de ${nome}?`)) return;
+  await update(ref(db,`plantoes/${key}`), {status:"encerrado", fim:new Date().toISOString()});
+  await push(ref(db,"notificacoes"), {tipo:"fim", texto:`${nome} encerrou plantão em ${setor}`, hora:nowStr(), cor:"red"});
+};
+
+window.iniciarPlantonista = async function(){
+  await push(ref(db,"plantoes"), {medicoKey:user.key, medicoNome:user.nome, medicoCrm:user.crm, setorId:null, setorNome:user.setor||"A definir", status:"ativo", inicio:new Date().toISOString(), fim:null});
+  await push(ref(db,"notificacoes"), {tipo:"inicio", texto:`${user.nome} iniciou plantão em ${user.setor||"setor a definir"}`, hora:nowStr(), cor:"green"});
+};
+
+window.encerrarPlantonista = async function(key){
+  if(!key) return;
+  await update(ref(db,`plantoes/${key}`), {status:"encerrado", fim:new Date().toISOString()});
+  await push(ref(db,"notificacoes"), {tipo:"fim", texto:`${user.nome} encerrou plantão`, hora:nowStr(), cor:"red"});
+};
+
+window.editarSetor = async function(key, setor){ await update(ref(db,`medicos/${key}`), {setor}); };
+
+window.resetSenha = async function(key, nome){
+  if(!confirm(`Resetar senha de ${nome} para 1234?`)) return;
+  await update(ref(db,`medicos/${key}`), {senha:"1234"});
+  alert("Senha resetada para 1234!");
+};
+
+window.deletarAnuncio = async function(key){
+  if(!confirm("Remover este anúncio?")) return;
+  await remove(ref(db,`anuncios/${key}`));
+};
+
+window.gerarRelatorio = function(tipo){
+  const plantoes=Object.values(plantoesDB);
+  const medicos=Object.values(medicosDB).filter(m=>m.role!=="gestor");
+  const hoje=new Date().toLocaleDateString("pt-BR");
+  let linhas=[];
+  if(tipo==="chegada") linhas=["RELATÓRIO DE CHEGADA — "+hoje,"=".repeat(60),...plantoes.map(p=>`${p.medicoNome} | CRM ${p.medicoCrm} | ${p.setorNome} | ${fmtTime(p.inicio)}`)];
+  else if(tipo==="fechamento") linhas=["RELATÓRIO DE FECHAMENTO — "+hoje,"=".repeat(60),...plantoes.filter(p=>p.fim).map(p=>`${p.medicoNome} | CRM ${p.medicoCrm} | ${p.setorNome} | ${fmtTime(p.inicio)} → ${fmtTime(p.fim)} | ${durStr(p.inicio,p.fim)}`)];
+  else if(tipo==="completo"){ linhas=["RELATÓRIO COMPLETO","=".repeat(60)]; plantoes.forEach(p=>{ linhas.push(`[${p.status.toUpperCase()}] ${p.medicoNome} CRM ${p.medicoCrm}`); linhas.push(`  Setor: ${p.setorNome} | Início: ${fmtTime(p.inicio)} | Fim: ${fmtTime(p.fim)} | ${durStr(p.inicio,p.fim)}`); linhas.push(""); }); }
+  else if(tipo==="ausencias"){ const cp=new Set(plantoes.map(p=>p.medicoKey)); linhas=["RELATÓRIO DE AUSÊNCIAS — "+hoje,"=".repeat(60),...medicos.filter(m=>!cp.has(m.key||`crm_${m.crm}`)).map(m=>`${m.nome} | CRM ${m.crm}`)]; }
+  const blob=new Blob([linhas.join("\n")],{type:"text/plain;charset=utf-8"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=`relatorio_${tipo}_${hoje.replace(/\//g,"-")}.txt`; a.click();
+};
+
+// ── MODALS ──
+window.openModal = function(tipo){
+  const mr=$("modal-root")||document.body;
+  const medicos=Object.entries(medicosDB).map(([k,v])=>({...v,key:k})).filter(m=>m.role!=="gestor");
+
+  if(tipo==="novoPlantao"){
+    mr.innerHTML=`<div class="overlay" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-head"><span style="font-weight:700;font-size:16px">Iniciar Plantão</span><button onclick="closeModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999">✕</button></div>
+      <div class="modal-body">
+        <label>Médico</label>
+        <select id="m-med"><option value="">Selecione...</option>${medicos.map(m=>`<option value="${m.key}">${m.nome} — CRM ${m.crm}</option>`).join("")}</select>
+        <label>Setor</label>
+        <select id="m-set"><option value="">Selecione...</option>${SETORES.map(s=>`<option value="${s.id}">${s.icone} ${s.nome}</option>`).join("")}</select>
+        <div style="display:flex;gap:8px;margin-top:20px">
+          <button class="btn btn-blue" style="flex:1" onclick="salvarPlantao()">✅ Iniciar</button>
+          <button class="btn btn-gray" onclick="closeModal()">Cancelar</button>
+        </div>
+      </div>
+    </div></div>`;
+  } else if(tipo==="novoMedico"){
+    mr.innerHTML=`<div class="overlay" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-head"><span style="font-weight:700;font-size:16px">Cadastrar Médico</span><button onclick="closeModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999">✕</button></div>
+      <div class="modal-body">
+        <label>Nome completo</label><input id="m-nome" placeholder="Dr(a). Nome Sobrenome"/>
+        <label>CRM (só números)</label><input id="m-crm" placeholder="Ex: 19644" inputmode="numeric"/>
+        <label>Matrícula</label><input id="m-mat" placeholder="Ex: 929.841-0"/>
+        <label>Setor</label><select id="m-set2"><option value="">Sem setor</option>${SETORES.map(s=>`<option value="${s.nome}">${s.icone} ${s.nome}</option>`).join("")}</select>
+        <label>Senha inicial</label><input id="m-sen" value="1234"/>
+        <div style="display:flex;gap:8px;margin-top:20px">
+          <button class="btn btn-blue" style="flex:1" onclick="salvarMedico()">Salvar</button>
+          <button class="btn btn-gray" onclick="closeModal()">Cancelar</button>
+        </div>
+      </div>
+    </div></div>`;
+  } else if(tipo==="novoAnuncio"){
+    mr.innerHTML=`<div class="overlay" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-head"><span style="font-weight:700;font-size:16px">Novo Anúncio</span><button onclick="closeModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999">✕</button></div>
+      <div class="modal-body">
+        <label>Título</label><input id="a-titulo" placeholder="Ex: Reunião amanhã às 8h"/>
+        <label>Mensagem</label><textarea id="a-texto" rows="3" style="resize:none" placeholder="Detalhes do anúncio..."></textarea>
+        <label>Tipo</label>
+        <select id="a-cor">
+          <option value="#2196F3">🔵 Informação</option>
+          <option value="#F44336">🔴 Urgente</option>
+          <option value="#FF9800">🟠 Aviso</option>
+          <option value="#4CAF50">🟢 Positivo</option>
+        </select>
+        <div style="display:flex;gap:8px;margin-top:20px">
+          <button class="btn btn-blue" style="flex:1" onclick="salvarAnuncio()">📢 Publicar</button>
+          <button class="btn btn-gray" onclick="closeModal()">Cancelar</button>
+        </div>
+      </div>
+    </div></div>`;
+  }
+};
+
+window.closeModal = function(){ const mr=$("modal-root"); if(mr) mr.innerHTML=""; };
+
+window.salvarPlantao = async function(){
+  const mk=$("m-med")?.value, sk=$("m-set")?.value;
+  if(!mk||!sk){ alert("Selecione médico e setor!"); return; }
+  const med=medicosDB[mk], set=SETORES.find(s=>s.id===sk);
+  await push(ref(db,"plantoes"),{medicoKey:mk, medicoNome:med.nome, medicoCrm:med.crm, setorId:sk, setorNome:set.nome, status:"ativo", inicio:new Date().toISOString(), fim:null});
+  await push(ref(db,"notificacoes"),{tipo:"inicio", texto:`${med.nome} iniciou plantão em ${set.nome}`, hora:nowStr(), cor:"green"});
+  closeModal();
+};
+
+window.salvarMedico = async function(){
+  const nome=$("m-nome")?.value.trim(), crm=$("m-crm")?.value.trim();
+  if(!nome||!crm){ alert("Nome e CRM obrigatórios!"); return; }
+  await set(ref(db,`medicos/crm_${crm}`),{crm, nome, matricula:$("m-mat")?.value||"", funcao:"Médico(a)", setor:$("m-set2")?.value||"", role:"plantonista", senha:$("m-sen")?.value||"1234"});
+  closeModal();
+};
+
+window.salvarAnuncio = async function(){
+  const titulo=$("a-titulo")?.value.trim(), texto=$("a-texto")?.value.trim();
+  if(!titulo||!texto){ alert("Preencha título e mensagem!"); return; }
+  await push(ref(db,"anuncios"),{titulo, texto, cor:$("a-cor")?.value||"#2196F3", hora:nowStr(), autor:user.nome});
+  closeModal();
+};
+
+// ── CLOCK ──
+function startClock(){
+  stopClock();
+  clockTick=setInterval(()=>{
+    const el=$("clock");
+    if(el) el.textContent=new Date().toLocaleString("pt-BR");
+    else stopClock();
+    // Atualiza duração ao vivo
+    const dur=$("dur-live");
+    if(dur){
+      const ativo=Object.entries(plantoesDB).map(([k,v])=>({...v,key:k})).find(p=>p.medicoKey===user?.key&&p.status==="ativo");
+      if(ativo) dur.textContent=durStr(ativo.inicio,null);
+    }
+  },1000);
+}
+
+// ── INIT ──
+async function init(){
+  await seedIfEmpty();
+  if(user) startListeners();
+  else render();
+}
+init();
+</script>
+</body>
+</html>
