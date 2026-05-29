@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background vermelho -->
+  <rect width="512" height="512" rx="100" fill="#C62828"/>
+  
+  <!-- Gota de sangue branca -->
+  <path d="M256 100 
+    C256 100, 160 220, 160 300 
+    C160 356 203 400 256 400 
+    C309 400 352 356 352 300 
+    C352 220 256 100 256 100Z" 
+    fill="white" opacity="0.95"/>
+  
+  <!-- Brilho na gota -->
+  <ellipse cx="228" cy="260" rx="18" ry="28" fill="white" opacity="0.35" transform="rotate(-20 228 260)"/>
+  
+  <!-- Cruz médica pequena -->
+  <rect x="236" y="290" width="40" height="12" rx="6" fill="#C62828" opacity="0.6"/>
+  <rect x="250" y="276" width="12" height="40" rx="6" fill="#C62828" opacity="0.6"/>
+</svg>
