@@ -1,0 +1,1950 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Importar Escala Transfusão — Agosto 2026</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#F0F4F8;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.card{background:#fff;border-radius:16px;padding:28px;max-width:540px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,.12)}
+h1{font-size:20px;font-weight:800;color:#0D1B2A;margin-bottom:6px}
+.sub{font-size:13px;color:#64748B;margin-bottom:20px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.stat{background:#F3E5F5;border-radius:10px;padding:12px;text-align:center}
+.stat-num{font-size:24px;font-weight:900;color:#7B1FA2}
+.stat-label{font-size:10px;color:#64748B;font-weight:700;text-transform:uppercase}
+.warn{background:#FFF3E0;border:1px solid #FFE0B2;border-radius:10px;padding:12px;font-size:13px;color:#E65100;margin-bottom:14px}
+.info{background:#E3F2FD;border:1px solid #BBDEFB;border-radius:10px;padding:12px;font-size:13px;color:#1565C0;margin-bottom:14px}
+.btn{width:100%;border:none;border-radius:12px;padding:15px;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:10px;font-family:inherit;color:#fff}
+.btn-purple{background:linear-gradient(135deg,#7B1FA2,#9C27B0)}
+.btn-blue{background:linear-gradient(135deg,#1565C0,#1976D2)}
+.btn-red{background:linear-gradient(135deg,#C62828,#D32F2F)}
+.btn:disabled{background:#E2E8F0;color:#94A3B8;cursor:not-allowed}
+.progress{height:6px;background:#E2E8F0;border-radius:4px;margin-bottom:14px;overflow:hidden;display:none}
+.progress-bar{height:100%;background:linear-gradient(90deg,#7B1FA2,#4CAF50);border-radius:4px;width:0%;transition:width .3s}
+#log{background:#0F172A;color:#4ADE80;border-radius:10px;padding:14px;font-family:monospace;font-size:12px;height:220px;overflow-y:auto;margin-top:14px;display:none}
+.new-med{background:#F8FAFC;border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:12px;border-left:3px solid #7B1FA2}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🩸 Importar Escala — Ambulatório de Transfusão</h1>
+  <div class="sub">Agosto 2026 · Hemocentro JP</div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-num">14</div><div class="stat-label">Médicos</div></div>
+    <div class="stat"><div class="stat-num">123</div><div class="stat-label">Plantões</div></div>
+    <div class="stat"><div class="stat-num">08</div><div class="stat-label">Mês</div></div>
+    <div class="stat"><div class="stat-num">2026</div><div class="stat-label">Ano</div></div>
+  </div>
+
+  <div class="info">ℹ️ <strong>7 médicos novos</strong> serão cadastrados automaticamente com senha padrão <strong>1234</strong>:<br><br>
+    <div class="new-med">Breno Luis Rocha Santos — CRM 11282</div>
+    <div class="new-med">Glaceanne Torres Mamede Bomfim — CRM 5926</div>
+    <div class="new-med">Leina Yukari Etto — CRM 6967</div>
+    <div class="new-med">Roberto Moura Grisi — CRM 4913</div>
+    <div class="new-med">Rodrigo de Medeiros Finizola — CRM 14435</div>
+    <div class="new-med">Taysa Maria Nobrega de Sousa — CRM 13220</div>
+    <div class="new-med">Sandra Sibeli Leite Vieira de Figueiredo — CRM 4030</div>
+  </div>
+
+  <div class="warn">⚠️ Hellen Karla (licença maternidade) não tem plantões neste mês.</div>
+
+  <div class="progress" id="prog"><div class="progress-bar" id="pbar"></div></div>
+
+  <button class="btn btn-purple" id="btnMed" onclick="cadastrarMedicos()">👥 1º Cadastrar Novos Médicos</button>
+  <button class="btn btn-blue" id="btnImport" onclick="importar()" disabled>🩸 2º Importar 123 Plantões</button>
+  <button class="btn btn-red" id="btnDel" onclick="deletar()" style="display:none">🗑️ Apagar Escalas de Agosto (Transfusão)</button>
+
+  <div id="log"></div>
+</div>
+
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+import {getDatabase,ref,push,set,remove,get} from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
+
+const db = getDatabase(initializeApp({
+  apiKey:"AIzaSyAqjzE_OJlSD28f521dByuP6lZy04yJpss",
+  authDomain:"hemocentro-joaopessoa.firebaseapp.com",
+  databaseURL:"https://hemocentro-joaopessoa-default-rtdb.firebaseio.com",
+  projectId:"hemocentro-joaopessoa",
+  storageBucket:"hemocentro-joaopessoa.firebasestorage.app",
+  messagingSenderId:"1074872155099",
+  appId:"1:1074872155099:web:2b9fbb8e3c9664893545fe"
+}));
+
+const ESCALAS = [
+  {
+    "medicoKey": "crm_17755",
+    "medicoNome": "Andre Barros Teixeira",
+    "medicoCrm": "17755",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 3,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_17755",
+    "medicoNome": "Andre Barros Teixeira",
+    "medicoCrm": "17755",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 10,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_17755",
+    "medicoNome": "Andre Barros Teixeira",
+    "medicoCrm": "17755",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 14,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_17755",
+    "medicoNome": "Andre Barros Teixeira",
+    "medicoCrm": "17755",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 17,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_17755",
+    "medicoNome": "Andre Barros Teixeira",
+    "medicoCrm": "17755",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 21,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_17755",
+    "medicoNome": "Andre Barros Teixeira",
+    "medicoCrm": "17755",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 24,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_17755",
+    "medicoNome": "Andre Barros Teixeira",
+    "medicoCrm": "17755",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 26,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_17755",
+    "medicoNome": "Andre Barros Teixeira",
+    "medicoCrm": "17755",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 28,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_17755",
+    "medicoNome": "Andre Barros Teixeira",
+    "medicoCrm": "17755",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 31,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_17198",
+    "medicoNome": "Antonio Jose Pedrosa Formiga",
+    "medicoCrm": "17198",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 5,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_17198",
+    "medicoNome": "Antonio Jose Pedrosa Formiga",
+    "medicoCrm": "17198",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 6,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_17198",
+    "medicoNome": "Antonio Jose Pedrosa Formiga",
+    "medicoCrm": "17198",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 12,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_17198",
+    "medicoNome": "Antonio Jose Pedrosa Formiga",
+    "medicoCrm": "17198",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 13,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_17198",
+    "medicoNome": "Antonio Jose Pedrosa Formiga",
+    "medicoCrm": "17198",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 19,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_17198",
+    "medicoNome": "Antonio Jose Pedrosa Formiga",
+    "medicoCrm": "17198",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 20,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_17198",
+    "medicoNome": "Antonio Jose Pedrosa Formiga",
+    "medicoCrm": "17198",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 26,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_17198",
+    "medicoNome": "Antonio Jose Pedrosa Formiga",
+    "medicoCrm": "17198",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 27,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11282",
+    "medicoNome": "Breno Luis Rocha Santos ( HEMATO PEDIATRA )",
+    "medicoCrm": "11282",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 3,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11282",
+    "medicoNome": "Breno Luis Rocha Santos ( HEMATO PEDIATRA )",
+    "medicoCrm": "11282",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 10,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11282",
+    "medicoNome": "Breno Luis Rocha Santos ( HEMATO PEDIATRA )",
+    "medicoCrm": "11282",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 17,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11282",
+    "medicoNome": "Breno Luis Rocha Santos ( HEMATO PEDIATRA )",
+    "medicoCrm": "11282",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 24,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11282",
+    "medicoNome": "Breno Luis Rocha Santos ( HEMATO PEDIATRA )",
+    "medicoCrm": "11282",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 31,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_18208",
+    "medicoNome": "Caio Henrique Santos Costa",
+    "medicoCrm": "18208",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 6,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_18208",
+    "medicoNome": "Caio Henrique Santos Costa",
+    "medicoCrm": "18208",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 10,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_18208",
+    "medicoNome": "Caio Henrique Santos Costa",
+    "medicoCrm": "18208",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 17,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_18208",
+    "medicoNome": "Caio Henrique Santos Costa",
+    "medicoCrm": "18208",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 24,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_18208",
+    "medicoNome": "Caio Henrique Santos Costa",
+    "medicoCrm": "18208",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 26,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_18208",
+    "medicoNome": "Caio Henrique Santos Costa",
+    "medicoCrm": "18208",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 27,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_18851",
+    "medicoNome": "Dayanna Joyce de Lacerda Ferreira",
+    "medicoCrm": "18851",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 4,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_18851",
+    "medicoNome": "Dayanna Joyce de Lacerda Ferreira",
+    "medicoCrm": "18851",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 5,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_18851",
+    "medicoNome": "Dayanna Joyce de Lacerda Ferreira",
+    "medicoCrm": "18851",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 11,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_18851",
+    "medicoNome": "Dayanna Joyce de Lacerda Ferreira",
+    "medicoCrm": "18851",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 12,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_18851",
+    "medicoNome": "Dayanna Joyce de Lacerda Ferreira",
+    "medicoCrm": "18851",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 18,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_18851",
+    "medicoNome": "Dayanna Joyce de Lacerda Ferreira",
+    "medicoCrm": "18851",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 19,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_18851",
+    "medicoNome": "Dayanna Joyce de Lacerda Ferreira",
+    "medicoCrm": "18851",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 25,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_18851",
+    "medicoNome": "Dayanna Joyce de Lacerda Ferreira",
+    "medicoCrm": "18851",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 26,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_13693",
+    "medicoNome": "Gabriella Palitot Bandeira",
+    "medicoCrm": "13693",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 6,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_13693",
+    "medicoNome": "Gabriella Palitot Bandeira",
+    "medicoCrm": "13693",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 7,
+    "month": 7,
+    "year": 2026,
+    "turno": "🌤 Tarde 13h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_13693",
+    "medicoNome": "Gabriella Palitot Bandeira",
+    "medicoCrm": "13693",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 14,
+    "month": 7,
+    "year": 2026,
+    "turno": "🌤 Tarde 13h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_13693",
+    "medicoNome": "Gabriella Palitot Bandeira",
+    "medicoCrm": "13693",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 20,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_13693",
+    "medicoNome": "Gabriella Palitot Bandeira",
+    "medicoCrm": "13693",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 21,
+    "month": 7,
+    "year": 2026,
+    "turno": "🌤 Tarde 13h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_13693",
+    "medicoNome": "Gabriella Palitot Bandeira",
+    "medicoCrm": "13693",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 27,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_13693",
+    "medicoNome": "Gabriella Palitot Bandeira",
+    "medicoCrm": "13693",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 28,
+    "month": 7,
+    "year": 2026,
+    "turno": "🌤 Tarde 13h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_5926",
+    "medicoNome": "Glaceanne Torres Mamede Bomfim ( PEDIATRA)",
+    "medicoCrm": "5926",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 4,
+    "month": 7,
+    "year": 2026,
+    "turno": "🌤 Tarde 13h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_5926",
+    "medicoNome": "Glaceanne Torres Mamede Bomfim ( PEDIATRA)",
+    "medicoCrm": "5926",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 5,
+    "month": 7,
+    "year": 2026,
+    "turno": "🌤 Tarde 13h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_5926",
+    "medicoNome": "Glaceanne Torres Mamede Bomfim ( PEDIATRA)",
+    "medicoCrm": "5926",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 7,
+    "month": 7,
+    "year": 2026,
+    "turno": "🌤 Tarde 13h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_5926",
+    "medicoNome": "Glaceanne Torres Mamede Bomfim ( PEDIATRA)",
+    "medicoCrm": "5926",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 11,
+    "month": 7,
+    "year": 2026,
+    "turno": "🌤 Tarde 13h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_5926",
+    "medicoNome": "Glaceanne Torres Mamede Bomfim ( PEDIATRA)",
+    "medicoCrm": "5926",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 12,
+    "month": 7,
+    "year": 2026,
+    "turno": "🌤 Tarde 13h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_5926",
+    "medicoNome": "Glaceanne Torres Mamede Bomfim ( PEDIATRA)",
+    "medicoCrm": "5926",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 14,
+    "month": 7,
+    "year": 2026,
+    "turno": "🌤 Tarde 13h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_5926",
+    "medicoNome": "Glaceanne Torres Mamede Bomfim ( PEDIATRA)",
+    "medicoCrm": "5926",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 18,
+    "month": 7,
+    "year": 2026,
+    "turno": "🌤 Tarde 13h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_5926",
+    "medicoNome": "Glaceanne Torres Mamede Bomfim ( PEDIATRA)",
+    "medicoCrm": "5926",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 19,
+    "month": 7,
+    "year": 2026,
+    "turno": "🌤 Tarde 13h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_5926",
+    "medicoNome": "Glaceanne Torres Mamede Bomfim ( PEDIATRA)",
+    "medicoCrm": "5926",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 21,
+    "month": 7,
+    "year": 2026,
+    "turno": "🌤 Tarde 13h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_5926",
+    "medicoNome": "Glaceanne Torres Mamede Bomfim ( PEDIATRA)",
+    "medicoCrm": "5926",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 25,
+    "month": 7,
+    "year": 2026,
+    "turno": "🌤 Tarde 13h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_5926",
+    "medicoNome": "Glaceanne Torres Mamede Bomfim ( PEDIATRA)",
+    "medicoCrm": "5926",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 26,
+    "month": 7,
+    "year": 2026,
+    "turno": "🌤 Tarde 13h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_5926",
+    "medicoNome": "Glaceanne Torres Mamede Bomfim ( PEDIATRA)",
+    "medicoCrm": "5926",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 28,
+    "month": 7,
+    "year": 2026,
+    "turno": "🌤 Tarde 13h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_6967",
+    "medicoNome": "Leina Yukari Etto ( HEMATO )",
+    "medicoCrm": "6967",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 1,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_6967",
+    "medicoNome": "Leina Yukari Etto ( HEMATO )",
+    "medicoCrm": "6967",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 3,
+    "month": 7,
+    "year": 2026,
+    "turno": "🌤 Tarde 13h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_6967",
+    "medicoNome": "Leina Yukari Etto ( HEMATO )",
+    "medicoCrm": "6967",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 4,
+    "month": 7,
+    "year": 2026,
+    "turno": "☀️ Manhã 07h–13h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_6967",
+    "medicoNome": "Leina Yukari Etto ( HEMATO )",
+    "medicoCrm": "6967",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 8,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_6967",
+    "medicoNome": "Leina Yukari Etto ( HEMATO )",
+    "medicoCrm": "6967",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 10,
+    "month": 7,
+    "year": 2026,
+    "turno": "🌤 Tarde 13h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_6967",
+    "medicoNome": "Leina Yukari Etto ( HEMATO )",
+    "medicoCrm": "6967",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 11,
+    "month": 7,
+    "year": 2026,
+    "turno": "☀️ Manhã 07h–13h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_6967",
+    "medicoNome": "Leina Yukari Etto ( HEMATO )",
+    "medicoCrm": "6967",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 15,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_6967",
+    "medicoNome": "Leina Yukari Etto ( HEMATO )",
+    "medicoCrm": "6967",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 17,
+    "month": 7,
+    "year": 2026,
+    "turno": "🌤 Tarde 13h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_6967",
+    "medicoNome": "Leina Yukari Etto ( HEMATO )",
+    "medicoCrm": "6967",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 18,
+    "month": 7,
+    "year": 2026,
+    "turno": "☀️ Manhã 07h–13h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_6967",
+    "medicoNome": "Leina Yukari Etto ( HEMATO )",
+    "medicoCrm": "6967",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 22,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_6967",
+    "medicoNome": "Leina Yukari Etto ( HEMATO )",
+    "medicoCrm": "6967",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 24,
+    "month": 7,
+    "year": 2026,
+    "turno": "🌤 Tarde 13h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_6967",
+    "medicoNome": "Leina Yukari Etto ( HEMATO )",
+    "medicoCrm": "6967",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 25,
+    "month": 7,
+    "year": 2026,
+    "turno": "☀️ Manhã 07h–13h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_6967",
+    "medicoNome": "Leina Yukari Etto ( HEMATO )",
+    "medicoCrm": "6967",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 29,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_6967",
+    "medicoNome": "Leina Yukari Etto ( HEMATO )",
+    "medicoCrm": "6967",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 31,
+    "month": 7,
+    "year": 2026,
+    "turno": "🌤 Tarde 13h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_4913",
+    "medicoNome": "Roberto Moura Grisi ( HEMATO )",
+    "medicoCrm": "4913",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 7,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_4913",
+    "medicoNome": "Roberto Moura Grisi ( HEMATO )",
+    "medicoCrm": "4913",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 14,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_4913",
+    "medicoNome": "Roberto Moura Grisi ( HEMATO )",
+    "medicoCrm": "4913",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 21,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11707",
+    "medicoNome": "Rodrigo Cahuana Chipayo",
+    "medicoCrm": "11707",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 3,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11707",
+    "medicoNome": "Rodrigo Cahuana Chipayo",
+    "medicoCrm": "11707",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 4,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11707",
+    "medicoNome": "Rodrigo Cahuana Chipayo",
+    "medicoCrm": "11707",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 5,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11707",
+    "medicoNome": "Rodrigo Cahuana Chipayo",
+    "medicoCrm": "11707",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 6,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11707",
+    "medicoNome": "Rodrigo Cahuana Chipayo",
+    "medicoCrm": "11707",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 7,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11707",
+    "medicoNome": "Rodrigo Cahuana Chipayo",
+    "medicoCrm": "11707",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 10,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11707",
+    "medicoNome": "Rodrigo Cahuana Chipayo",
+    "medicoCrm": "11707",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 11,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11707",
+    "medicoNome": "Rodrigo Cahuana Chipayo",
+    "medicoCrm": "11707",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 12,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11707",
+    "medicoNome": "Rodrigo Cahuana Chipayo",
+    "medicoCrm": "11707",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 13,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11707",
+    "medicoNome": "Rodrigo Cahuana Chipayo",
+    "medicoCrm": "11707",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 14,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11707",
+    "medicoNome": "Rodrigo Cahuana Chipayo",
+    "medicoCrm": "11707",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 17,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11707",
+    "medicoNome": "Rodrigo Cahuana Chipayo",
+    "medicoCrm": "11707",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 18,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11707",
+    "medicoNome": "Rodrigo Cahuana Chipayo",
+    "medicoCrm": "11707",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 19,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11707",
+    "medicoNome": "Rodrigo Cahuana Chipayo",
+    "medicoCrm": "11707",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 20,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11707",
+    "medicoNome": "Rodrigo Cahuana Chipayo",
+    "medicoCrm": "11707",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 21,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11707",
+    "medicoNome": "Rodrigo Cahuana Chipayo",
+    "medicoCrm": "11707",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 24,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11707",
+    "medicoNome": "Rodrigo Cahuana Chipayo",
+    "medicoCrm": "11707",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 25,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11707",
+    "medicoNome": "Rodrigo Cahuana Chipayo",
+    "medicoCrm": "11707",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 26,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11707",
+    "medicoNome": "Rodrigo Cahuana Chipayo",
+    "medicoCrm": "11707",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 27,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11707",
+    "medicoNome": "Rodrigo Cahuana Chipayo",
+    "medicoCrm": "11707",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 28,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_11707",
+    "medicoNome": "Rodrigo Cahuana Chipayo",
+    "medicoCrm": "11707",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 31,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_14074",
+    "medicoNome": "Ravel alves",
+    "medicoCrm": "14074",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 4,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_14074",
+    "medicoNome": "Ravel alves",
+    "medicoCrm": "14074",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 5,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_14074",
+    "medicoNome": "Ravel alves",
+    "medicoCrm": "14074",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 11,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_14074",
+    "medicoNome": "Ravel alves",
+    "medicoCrm": "14074",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 12,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_14074",
+    "medicoNome": "Ravel alves",
+    "medicoCrm": "14074",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 14,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_14074",
+    "medicoNome": "Ravel alves",
+    "medicoCrm": "14074",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 18,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_14074",
+    "medicoNome": "Ravel alves",
+    "medicoCrm": "14074",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 19,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_14074",
+    "medicoNome": "Ravel alves",
+    "medicoCrm": "14074",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 21,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_14074",
+    "medicoNome": "Ravel alves",
+    "medicoCrm": "14074",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 25,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_14074",
+    "medicoNome": "Ravel alves",
+    "medicoCrm": "14074",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 28,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_14435",
+    "medicoNome": "Rodrigo de Medeiros Finizola",
+    "medicoCrm": "14435",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 10,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_14435",
+    "medicoNome": "Rodrigo de Medeiros Finizola",
+    "medicoCrm": "14435",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 17,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_14435",
+    "medicoNome": "Rodrigo de Medeiros Finizola",
+    "medicoCrm": "14435",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 24,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_14435",
+    "medicoNome": "Rodrigo de Medeiros Finizola",
+    "medicoCrm": "14435",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 31,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_13220",
+    "medicoNome": "Taysa Maria Nobrega de Sousa",
+    "medicoCrm": "13220",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 5,
+    "month": 7,
+    "year": 2026,
+    "turno": "☀️ Manhã 07h–13h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_13220",
+    "medicoNome": "Taysa Maria Nobrega de Sousa",
+    "medicoCrm": "13220",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 6,
+    "month": 7,
+    "year": 2026,
+    "turno": "☀️ Manhã 07h–13h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_13220",
+    "medicoNome": "Taysa Maria Nobrega de Sousa",
+    "medicoCrm": "13220",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 12,
+    "month": 7,
+    "year": 2026,
+    "turno": "☀️ Manhã 07h–13h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_13220",
+    "medicoNome": "Taysa Maria Nobrega de Sousa",
+    "medicoCrm": "13220",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 13,
+    "month": 7,
+    "year": 2026,
+    "turno": "☀️ Manhã 07h–13h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_13220",
+    "medicoNome": "Taysa Maria Nobrega de Sousa",
+    "medicoCrm": "13220",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 19,
+    "month": 7,
+    "year": 2026,
+    "turno": "☀️ Manhã 07h–13h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_13220",
+    "medicoNome": "Taysa Maria Nobrega de Sousa",
+    "medicoCrm": "13220",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 20,
+    "month": 7,
+    "year": 2026,
+    "turno": "☀️ Manhã 07h–13h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_13220",
+    "medicoNome": "Taysa Maria Nobrega de Sousa",
+    "medicoCrm": "13220",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 26,
+    "month": 7,
+    "year": 2026,
+    "turno": "☀️ Manhã 07h–13h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_13220",
+    "medicoNome": "Taysa Maria Nobrega de Sousa",
+    "medicoCrm": "13220",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 27,
+    "month": 7,
+    "year": 2026,
+    "turno": "☀️ Manhã 07h–13h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_4030",
+    "medicoNome": "Sandra Sibeli Leite Vieira de Figueiredo ( HEMATO )",
+    "medicoCrm": "4030",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 4,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_4030",
+    "medicoNome": "Sandra Sibeli Leite Vieira de Figueiredo ( HEMATO )",
+    "medicoCrm": "4030",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 5,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_4030",
+    "medicoNome": "Sandra Sibeli Leite Vieira de Figueiredo ( HEMATO )",
+    "medicoCrm": "4030",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 11,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_4030",
+    "medicoNome": "Sandra Sibeli Leite Vieira de Figueiredo ( HEMATO )",
+    "medicoCrm": "4030",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 12,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_4030",
+    "medicoNome": "Sandra Sibeli Leite Vieira de Figueiredo ( HEMATO )",
+    "medicoCrm": "4030",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 18,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_4030",
+    "medicoNome": "Sandra Sibeli Leite Vieira de Figueiredo ( HEMATO )",
+    "medicoCrm": "4030",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 19,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_4030",
+    "medicoNome": "Sandra Sibeli Leite Vieira de Figueiredo ( HEMATO )",
+    "medicoCrm": "4030",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 25,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  },
+  {
+    "medicoKey": "crm_4030",
+    "medicoNome": "Sandra Sibeli Leite Vieira de Figueiredo ( HEMATO )",
+    "medicoCrm": "4030",
+    "setorId": "transfusao",
+    "setorNome": "Ambulatório de Transfusão",
+    "day": 26,
+    "month": 7,
+    "year": 2026,
+    "turno": "🩸 Plantão 07h–18h",
+    "obs": "Importado da escala oficial de Agosto/2026",
+    "criadoPor": "Importação automática",
+    "criadoEm": "01/08/2026"
+  }
+];
+const NEW_MEDS = {
+  "crm_11282": {
+    "crm": "11282",
+    "nome": "Breno Luis Rocha Santos",
+    "matricula": "919.636-6",
+    "funcao": "Médico(a)",
+    "setor": "Ambulatório de Transfusão",
+    "role": "plantonista",
+    "senha": "1234",
+    "foto": ""
+  },
+  "crm_5926": {
+    "crm": "5926",
+    "nome": "Glaceanne Torres Mamede Bomfim",
+    "matricula": "160.094-0",
+    "funcao": "Médico(a)",
+    "setor": "Ambulatório de Transfusão",
+    "role": "plantonista",
+    "senha": "1234",
+    "foto": ""
+  },
+  "crm_6967": {
+    "crm": "6967",
+    "nome": "Leina Yukari Etto",
+    "matricula": "943.532-8",
+    "funcao": "Médico(a)",
+    "setor": "Ambulatório de Transfusão",
+    "role": "plantonista",
+    "senha": "1234",
+    "foto": ""
+  },
+  "crm_4913": {
+    "crm": "4913",
+    "nome": "Roberto Moura Grisi",
+    "matricula": "",
+    "funcao": "Médico(a)",
+    "setor": "Ambulatório de Transfusão",
+    "role": "plantonista",
+    "senha": "1234",
+    "foto": ""
+  },
+  "crm_14435": {
+    "crm": "14435",
+    "nome": "Rodrigo de Medeiros Finizola",
+    "matricula": "",
+    "funcao": "Médico(a)",
+    "setor": "Ambulatório de Transfusão",
+    "role": "plantonista",
+    "senha": "1234",
+    "foto": ""
+  },
+  "crm_13220": {
+    "crm": "13220",
+    "nome": "Taysa Maria Nobrega de Sousa",
+    "matricula": "",
+    "funcao": "Médico(a)",
+    "setor": "Ambulatório de Transfusão",
+    "role": "plantonista",
+    "senha": "1234",
+    "foto": ""
+  },
+  "crm_4030": {
+    "crm": "4030",
+    "nome": "Sandra Sibeli Leite Vieira de Figueiredo",
+    "matricula": "",
+    "funcao": "Médico(a)",
+    "setor": "Ambulatório de Transfusão",
+    "role": "plantonista",
+    "senha": "1234",
+    "foto": ""
+  }
+};
+
+function log(msg, cor="#4ADE80"){
+  const el=document.getElementById("log");
+  el.style.display="block";
+  el.innerHTML+=`<span style="color:${cor}">${msg}</span>\n`;
+  el.scrollTop=el.scrollHeight;
+}
+function setProgress(pct){
+  document.getElementById("prog").style.display="block";
+  document.getElementById("pbar").style.width=pct+"%";
+}
+
+window.cadastrarMedicos = async function(){
+  const btn=document.getElementById("btnMed");
+  btn.disabled=true; btn.textContent="Cadastrando...";
+  log("👥 Cadastrando 7 novos médicos...");
+  let ok=0;
+  for(const [key,med] of Object.entries(NEW_MEDS)){
+    const snap=await get(ref(db,`medicos/${key}`));
+    if(!snap.exists()){
+      await set(ref(db,`medicos/${key}`), med);
+      log(`✅ ${med.nome.split(" ").slice(0,3).join(" ")} (CRM ${med.crm)}) cadastrado`);
+      ok++;
+    } else {
+      log(`⚠️ ${med.nome.split(" ")[0]} já existe no sistema`,"#FCD34D");
+    }
+  }
+  log(`\n✅ ${ok} novos médicos cadastrados!`,"#FCD34D");
+  btn.textContent="✅ Médicos cadastrados!";
+  document.getElementById("btnImport").disabled=false;
+};
+
+window.importar = async function(){
+  const btn=document.getElementById("btnImport");
+  btn.disabled=true; btn.textContent="Importando...";
+  log("\n🩸 Importando "+ESCALAS.length+" plantões do Ambulatório de Transfusão...");
+  let ok=0,erros=0;
+  for(let i=0;i<ESCALAS.length;i++){
+    const e=ESCALAS[i];
+    try{
+      await push(ref(db,"escalas"),e);
+      ok++;
+      if(ok%10===0||ok===ESCALAS.length){
+        log(`✅ ${ok}/${ESCALAS.length} — ${e.medicoNome.split(" ")[0]} dia ${e.day}/08`);
+        setProgress(Math.round((ok/ESCALAS.length)*100));
+      }
+    }catch(err){
+      erros++;
+      log(`❌ Erro: ${err.message}`,"#F87171");
+    }
+    await new Promise(r=>setTimeout(r,40));
+  }
+  setProgress(100);
+  log(`\n🎉 CONCLUÍDO! ${ok} plantões importados.${erros?" "+erros+" erros.":""}`,"#FCD34D");
+  log("Abra o app → Calendário → Agosto 2026 🩸","#93C5FD");
+  btn.textContent="✅ Importado!";
+  document.getElementById("btnDel").style.display="block";
+};
+
+window.deletar = async function(){
+  if(!confirm("Apagar TODAS as escalas de Agosto 2026 do setor Transfusão?")) return;
+  const btn=document.getElementById("btnDel");
+  btn.disabled=true; btn.textContent="Apagando...";
+  const snap=await get(ref(db,"escalas"));
+  const all=snap.val()||{};
+  let count=0;
+  for(const [key,val] of Object.entries(all)){
+    if(val.month===7&&val.year===2026&&val.setorId==="transfusao"){
+      await remove(ref(db,`escalas/${key}`));
+      count++;
+    }
+  }
+  log(`\n🗑️ ${count} escalas de Transfusão de Agosto removidas.`,"#FCD34D");
+  btn.textContent="Apagado";
+};
+</script>
+</body>
+</html>
