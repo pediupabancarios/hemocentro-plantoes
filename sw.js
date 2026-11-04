@@ -3,7 +3,7 @@
    cache só como fallback offline). Cache-primeiro-com-revalidação para
    os demais GET same-origin. Requisições cross-origin (Firebase) passam direto.
    Suba a versão C para limpar caches antigos no activate. */
-const C = "hjp-v24";
+const C = "hjp-v25";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./logo-hemocentro.png", "./logo-mark.png", "./src/lib.js"];
 
 self.addEventListener("install", e => {
